@@ -4,10 +4,6 @@
 // GNU GPL V3
 //--------------------------------------------------------------------------------------
 
-#ifdef F_CPU  
-#undef F_CPU
-#endif  
-#define F_CPU 1000000 // 1 MHz  
 
 #include <JeeLib.h> // https://github.com/jcw/jeelib
 #include "pins_arduino.h"
@@ -17,6 +13,11 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Slee
 #define myNodeID 18      // RF12 node ID in the range 1-30
 #define network 210      // RF12 Network group
 #define freq RF12_868MHZ // Frequency of RFM12B module
+
+#define RETRY_PERIOD 5    // How soon to retry (in seconds) if ACK didn't come in
+#define RETRY_LIMIT 5     // Maximum number of times to retry
+#define ACK_TIME 10       // Number of milliseconds to wait for an ack
+
 
 //#define LEDpin PB0 new revisions use this pin as CLKI
 #define LEDpin 10
@@ -43,33 +44,24 @@ int pos=0;
 
  Payload temptx;
 
-static void setPrescaler (uint8_t mode) {
-    cli();
-    CLKPR = bit(CLKPCE);
-    CLKPR = mode;
-    sei();
-}
- 
+
 void setup() {
 
-  setPrescaler(1);    // div 1, i.e. 4 MHz
   pinMode(LEDpin,OUTPUT);
   digitalWrite(LEDpin,LOW);
   delay(1000);
   digitalWrite(LEDpin,HIGH);
 
   rf12_initialize(myNodeID,freq,network); // Initialize RFM12 with settings defined above 
-  // Adjust low battery voltage to 2.2V UNTESTED!!!!!!!!!!!!!!!!!!!!!
+  // Adjust low battery voltage to 2.2V
   rf12_control(0xC040);
   rf12_sleep(0);                          // Put the RFM12 to sleep
-//  Serial.begin(9600);
   PRR = bit(PRTIM1); // only keep timer 0 going
 }
 
 void loop() {
   pinMode(LEDpin,OUTPUT);
   digitalWrite(LEDpin,LOW);  
-  setPrescaler(3);  // div 8, i.e. 1 MHz
   bitClear(PRR, PRADC); // power up the ADC
   ADCSRA |= bit(ADEN); // enable the ADC  
   Sleepy::loseSomeTime(16); // Allow 10ms for the sensor to be ready
@@ -87,7 +79,7 @@ void loop() {
   rfwrite(); // Send data via RF 
 
   for(int j = 0; j < 1; j++) {    // Sleep for 5 minutes
-    Sleepy::loseSomeTime(60000); //JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
+    Sleepy::loseSomeTime(6000); //JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
   }
 }
 
@@ -95,7 +87,6 @@ void loop() {
 // Send payload data via RF
 //--------------------------------------------------------------------------------------------------
 static void rfwrite(){
-  setPrescaler(1);    // div 1, i.e. 4 MHz
    bitClear(PRR, PRUSI); // enable USI h/w
    rf12_sleep(-1);     //wake up RF module
    while (!rf12_canSend())
@@ -104,7 +95,6 @@ static void rfwrite(){
    rf12_sendWait(2);    //wait for RF to finish sending while in standby mode
    rf12_sleep(0);    //put RF module to sleep
    bitSet(PRR, PRUSI); // disable USI h/w
-   setPrescaler(4); // div 4, i.e. 1 MHz
 }
 //--------------------------------------------------------------------------------------------------
 // Read current supply voltage
