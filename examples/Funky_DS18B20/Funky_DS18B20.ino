@@ -25,7 +25,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
 //#define LEDpin PB0 new revisions use this pin as CLKI
-#define LEDpin 0
+#define LEDpin 10
 
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
