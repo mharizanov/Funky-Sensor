@@ -76,13 +76,10 @@ void loop() {
   digitalWrite(PowerPin,HIGH);
  
   bitClear(PRR, PRADC); // power up the ADC
-  ADCSRA |= bit(ADEN); // enable the ADC  
-
-  Sleepy::loseSomeTime(50); // Allow for the sensor to be ready
-  
+  ADCSRA |= bit(ADEN); // enable the ADC    
   digitalWrite(LEDpin,HIGH);    //LED off
     
-  Sleepy::loseSomeTime(1500); // Allow for the sensor to be ready
+  Sleepy::loseSomeTime(2000); // Allow for the sensor to be ready
 
   DHT22_ERROR_t errorCode;  
   errorCode = dht.readData(); // read data from sensor
