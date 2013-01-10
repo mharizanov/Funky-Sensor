@@ -77,6 +77,8 @@ void loop() {
  
   bitClear(PRR, PRADC); // power up the ADC
   ADCSRA |= bit(ADEN); // enable the ADC    
+  
+  Sleepy::loseSomeTime(50); // Allow for the LED blink to become visible
   digitalWrite(LEDpin,HIGH);    //LED off
     
   Sleepy::loseSomeTime(2000); // Allow for the sensor to be ready
