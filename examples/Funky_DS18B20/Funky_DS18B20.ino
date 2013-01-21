@@ -30,7 +30,7 @@ DallasTemperature sensors(&oneWire);
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
 
-#define myNodeID 9      // RF12 node ID in the range 1-30
+#define myNodeID 29      // RF12 node ID in the range 1-30
 #define network 210      // RF12 Network group
 #define freq RF12_868MHZ // Frequency of RFM12B module
 
@@ -111,7 +111,7 @@ void loop() {
   
   rfwrite(); // Send data via RF   
   
-  for(byte j = 0; j < 5; j++) {    // Sleep for 5 minutes
+  for(byte j = 0; j < 3; j++) {    // Sleep for 5 minutes
     Sleepy::loseSomeTime(60000); //JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
   }
 
