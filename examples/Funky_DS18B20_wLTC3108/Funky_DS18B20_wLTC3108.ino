@@ -30,7 +30,7 @@ DallasTemperature sensors(&oneWire);
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
 
-#define myNodeID 3      // RF12 node ID in the range 1-30
+#define myNodeID 27      // RF12 node ID in the range 1-30
 #define network 210      // RF12 Network group
 #define freq RF12_868MHZ // Frequency of RFM12B module
 
@@ -62,21 +62,26 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Slee
 
 void setup() {
 
-  pinMode(LEDpin,OUTPUT);
-  digitalWrite(LEDpin,LOW);  // LED on
-  Sleepy::loseSomeTime(100); 
-  digitalWrite(LEDpin,HIGH);   // LED off
-  
-  rf12_initialize(myNodeID,freq,network); // Initialize RFM12 with settings defined above 
-  rf12_control(0xC000);					  // Adjust low battery voltage to 2.2V
-  rf12_sleep(0);                          // Put the RFM12 to sleep
- 
   PRR = bit(PRTIM1); // only keep timer 0 going
   ADCSRA &= ~ bit(ADEN); // Disable the ADC
   bitSet (PRR, PRADC);   // Power down ADC
   bitClear (ACSR, ACIE); // Disable comparitor interrupts
   bitClear (ACSR, ACD);  // Power down analogue comparitor
+
+  Sleepy::loseSomeTime(32); 
+
   bitSet(PRR, PRUSI); // disable USI h/w  
+
+  rf12_initialize(myNodeID,freq,network); // Initialize RFM12 with settings defined above 
+  rf12_control(0xC000);					  // Adjust low battery voltage to 2.2V
+  rf12_sleep(0);                          // Put the RFM12 to sleep
+  
+  pinMode(LEDpin,OUTPUT);
+  digitalWrite(LEDpin,LOW);  // LED on
+  Sleepy::loseSomeTime(50); 
+  digitalWrite(LEDpin,HIGH);   // LED off
+
+  Sleepy::loseSomeTime(8000);  // allow some time for battery to recover
   
   pinMode(tempPower, OUTPUT); // set power pin for DS18B20 to output
   digitalWrite(tempPower, HIGH); // turn sensor power on
@@ -84,6 +89,8 @@ void setup() {
   // Start up the library
   sensors.begin(); 
   numSensors=sensors.getDeviceCount(); 
+  digitalWrite(tempPower, LOW); // turn DS18B20 sensor off
+  Sleepy::loseSomeTime(16000);  // allow some time for battery to recover
 }
 
 void loop() {
@@ -92,6 +99,10 @@ void loop() {
   pinMode(tempPower, OUTPUT); // set power pin for DS18B20 to output  
   digitalWrite(tempPower, HIGH); // turn DS18B20 sensor on
   Sleepy::loseSomeTime(10); // Allow 10ms for the sensor to be ready
+  
+  Sleepy::loseSomeTime(30); // some more to see the led
+  digitalWrite(LEDpin,HIGH);  //LED off
+    
   sensors.requestTemperatures(); // Send the command to get temperatures  
   temptx.temp=(sensors.getTempCByIndex(0)*100); // read sensor 1
   if (numSensors>1) temptx.temp2=(sensors.getTempCByIndex(1)*100); // read second sensor.. you may have multiple and count them upon startup but I only need two
@@ -100,18 +111,19 @@ void loop() {
   digitalWrite(tempPower, LOW); // turn DS18B20 sensor off
   pinMode(tempPower, INPUT); // set power pin for DS18B20 to input before sleeping, saves power
 
-  digitalWrite(LEDpin,HIGH);  //LED off
+  Sleepy::loseSomeTime(16000);  // allow some time for battery to recover
   
   bitClear(PRR, PRADC); // power up the ADC
   ADCSRA |= bit(ADEN); // enable the ADC  
-  Sleepy::loseSomeTime(2); 
+  Sleepy::loseSomeTime(10); 
   temptx.supplyV = readVcc(); // Get supply voltage
   ADCSRA &= ~ bit(ADEN); // disable the ADC
   bitSet(PRR, PRADC); // power down the ADC
   
-  rfwrite(); // Send data via RF   
+  if (temptx.supplyV > 2900)      //is there enough juice to do the transmission?
+    rfwrite(); // Send data via RF   
   
-  for(byte j = 0; j < 2; j++) {    // Sleep for j minutes
+  for(byte j = 0; j < 1; j++) {    // Sleep for 5 minutes
     Sleepy::loseSomeTime(60000); //JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
   }
 

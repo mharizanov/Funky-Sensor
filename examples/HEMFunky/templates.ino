@@ -145,7 +145,7 @@ void draw_outdoor_page(char* otempstr, double otemp, double minotemp, double max
 //------------------------------------------------------------------
 // Draws the Dasboard page
 //------------------------------------------------------------------
-void draw_dash_page(double use, double usekwh, double humi, double otemp, double minotemp,double maxotemp, double temp, double mintemp, double maxtemp, unsigned long last_emontx, unsigned long last_emonbase)
+void draw_dash_page(double use, double usekwh, double humi, double otemp, double minotemp,double maxotemp, double temp, double mintemp, double maxtemp, unsigned long last_emontx, unsigned long last_emonbase, double stemp)
 {
   
   int MINTEMP = -15;
@@ -196,6 +196,16 @@ void draw_dash_page(double use, double usekwh, double humi, double otemp, double
 //  dtostrf(batt,0,0,str); 
 //  strcat(str,"mV");
 //  glcd.drawString(0,0,str);
+
+  // Solar temperature
+  glcd.setFont(font_clR4x6);             
+  
+  //itoa((int)stemp,str,10);
+  dtostrf(stemp,0,1,str);
+  strcat(str," C");
+  glcd.drawString_P(0,0,PSTR("SOLAR "));
+  glcd.drawString(24,0,str);
+
   
   //big bold font
   glcd.setFont(font_helvB14);

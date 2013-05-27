@@ -39,6 +39,7 @@
 #include <JeeLib.h>
 #include <GLCD_ST7565.h>
 #include <avr/pgmspace.h>
+#include <avr/wdt.h>
 GLCD_ST7565 glcd;
 
 #include <OneWire.h>		    // http://www.pjrc.com/teensy/td_libs_OneWire.html
@@ -66,8 +67,12 @@ PayloadGLCD emonglcd;
 typedef struct { byte magic, hour, mins, sec; } PayloadBase;			// new payload def for time data reception
 PayloadBase emonbase; 
 
-typedef struct { int temperature, humidity; } PayloadFunky;
+typedef struct { int temperature, humidity,dummy; } PayloadFunky;
 PayloadFunky emonfunky;
+
+typedef struct { int temperature, batt, dummy; } PayloadSolar;
+PayloadSolar emonsolar;
+
 
 //---------------------------------------------------
 // emonGLCD SETUP
@@ -86,7 +91,7 @@ const int switch3=19;
 //---------------------------------------------------
 int hour = 0, minute = 0;
 double usekwh = 0;
-double otemp = 0, humi = 0;
+double otemp = 0, humi = 0, stemp=0;
 double minotemp, maxotemp, minhumi, maxhumi, batt;
 double use_history[7];
 int cval_use;
@@ -135,6 +140,9 @@ void setup()
   pinMode(switch1, INPUT); pinMode(switch2, INPUT); pinMode(switch2, INPUT);
   digitalWrite(switch1, HIGH); digitalWrite(switch2, HIGH); digitalWrite(switch3, HIGH); 
   #endif
+
+   wdt_enable(WDTO_8S); 
+
 }
 
 //--------------------------------------------------------------------------------------------
@@ -142,7 +150,8 @@ void setup()
 //--------------------------------------------------------------------------------------------
 void loop()
 {
-  
+ 
+  wdt_reset(); 
   if (rf12_recvDone())
   {
     if (rf12_crc == 0 && (rf12_hdr & RF12_HDR_CTL) == 0)  // and no rf errors
@@ -150,6 +159,8 @@ void loop()
       byte node_id = (rf12_hdr & 0x1F);
       if (node_id == 10) {emontx = *(PayloadTX*) rf12_data; last_emontx = millis();}
       if (node_id == 20) {emonfunky = *(PayloadFunky*) rf12_data; last_emontx = millis();}
+      if (node_id == 7) {emonsolar = *(PayloadSolar*) rf12_data; last_emontx = millis();     stemp = (double)emonsolar.temperature / 100; }
+
       
       if (node_id == 22)
       {
@@ -195,7 +206,7 @@ void loop()
 
     if (page==1)
     {            
-      draw_dash_page(cval_use, usekwh, humi, otemp, minotemp, maxotemp, temp, mintemp, maxtemp, last_emontx, last_emonbase);
+      draw_dash_page(cval_use, usekwh, humi, otemp, minotemp, maxotemp, temp, mintemp, maxtemp, last_emontx, last_emonbase,stemp);
       glcd.refresh();
     }
     else if (page==2)
