@@ -23,6 +23,11 @@ OneWire oneWire(ONE_WIRE_BUS);
  
 // Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
+//addresses of sensors, MAX 4!!
+byte allAddress [4][8];  // 8 bytes per address
+#define TEMPERATURE_PRECISION 11
+#define ASYNC_DELAY 375 // 9bit requres 95ms, 10bit 187ms, 11bit 375ms and 12bit resolution takes 750ms
+
 
 //#define LEDpin PB0 new revisions use this pin as CLKI
 #define LEDpin 10
@@ -30,7 +35,7 @@ DallasTemperature sensors(&oneWire);
 
 ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Sleepy power saving
 
-#define myNodeID 3      // RF12 node ID in the range 1-30
+#define myNodeID 19      // RF12 node ID in the range 1-30
 #define network 210      // RF12 Network group
 #define freq RF12_868MHZ // Frequency of RFM12B module
 
@@ -83,35 +88,54 @@ void setup() {
   Sleepy::loseSomeTime(50); // Allow 50ms for the sensor to be ready
   // Start up the library
   sensors.begin(); 
+  sensors.setWaitForConversion(false);     
   numSensors=sensors.getDeviceCount(); 
+
+  byte j=0;                                        // search for one wire devices and
+                                                   // copy to device address arrays.
+  while ((j < numSensors) && (oneWire.search(allAddress[j]))) {        
+    j++;
+  }
+    
+
+  
 }
 
 void loop() {
-  digitalWrite(LEDpin,LOW);  //LED on for some time, to show we are alive
-
   pinMode(tempPower, OUTPUT); // set power pin for DS18B20 to output  
   digitalWrite(tempPower, HIGH); // turn DS18B20 sensor on
-  Sleepy::loseSomeTime(10); // Allow 10ms for the sensor to be ready
+  Sleepy::loseSomeTime(20); // Allow 20ms for the sensor to be ready
   sensors.requestTemperatures(); // Send the command to get temperatures  
-  temptx.temp=(sensors.getTempCByIndex(0)*100); // read sensor 1
-  if (numSensors>1) temptx.temp2=(sensors.getTempCByIndex(1)*100); // read second sensor.. you may have multiple and count them upon startup but I only need two
-  if (numSensors>2) temptx.temp3=(sensors.getTempCByIndex(2)*100); 
-  if (numSensors>3) temptx.temp4=(sensors.getTempCByIndex(3)*100);
+  
+  
+    for(int j=0;j<numSensors;j++) {
+    sensors.setResolution(allAddress[j], TEMPERATURE_PRECISION);      // and set the a to d conversion resolution of each.
+  }
+    
+  sensors.requestTemperatures(); // Send the command to get temperatures  
+  Sleepy::loseSomeTime(ASYNC_DELAY); //Must wait for conversion, since we use ASYNC mode
+  
+                     temptx.temp=(sensors.getTempC(allAddress[0])*100);  
+  if (numSensors>1) { temptx.temp2=(sensors.getTempC(allAddress[1])*100); } 
+  if (numSensors>2) { temptx.temp3=(sensors.getTempC(allAddress[2])*100); } 
+  if (numSensors>3) { temptx.temp4=(sensors.getTempC(allAddress[3])*100); }
   digitalWrite(tempPower, LOW); // turn DS18B20 sensor off
   pinMode(tempPower, INPUT); // set power pin for DS18B20 to input before sleeping, saves power
-
-  digitalWrite(LEDpin,HIGH);  //LED off
   
+  digitalWrite(LEDpin,LOW);  //LED on for some time, to show we are alive
+
   bitClear(PRR, PRADC); // power up the ADC
   ADCSRA |= bit(ADEN); // enable the ADC  
   Sleepy::loseSomeTime(2); 
   temptx.supplyV = readVcc(); // Get supply voltage
   ADCSRA &= ~ bit(ADEN); // disable the ADC
   bitSet(PRR, PRADC); // power down the ADC
+
+  digitalWrite(LEDpin,HIGH);  //LED off
   
   rfwrite(); // Send data via RF   
   
-  for(byte j = 0; j < 2; j++) {    // Sleep for j minutes
+  for(byte j = 0; j < 5; j++) {    // Sleep for j minutes
     Sleepy::loseSomeTime(60000); //JeeLabs power save function: enter low power mode for 60 seconds (valid range 16-65000 ms)
   }
 
