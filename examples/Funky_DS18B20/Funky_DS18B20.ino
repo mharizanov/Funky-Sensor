@@ -11,7 +11,6 @@
 
 #include <OneWire.h>   // http://www.pjrc.com/teensy/arduino_libraries/OneWire.zip
 #include <DallasTemperature.h>  // http://download.milesburton.com/Arduino/MaximTemperature/DallasTemperature_371Beta.zip
-#define TEMPERATURE_PRECISION 9
  
 #define ONE_WIRE_BUS 3  // pad 5 of the Funky
 #define tempPower 7     // Power pin is connected pad 4 on the Funky
@@ -25,8 +24,8 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 //addresses of sensors, MAX 4!!
 byte allAddress [4][8];  // 8 bytes per address
-#define TEMPERATURE_PRECISION 11
-#define ASYNC_DELAY 375 // 9bit requres 95ms, 10bit 187ms, 11bit 375ms and 12bit resolution takes 750ms
+#define TEMPERATURE_PRECISION 12
+#define ASYNC_DELAY 750 // 9bit requres 95ms, 10bit 187ms, 11bit 375ms and 12bit resolution takes 750ms
 
 
 //#define LEDpin PB0 new revisions use this pin as CLKI
@@ -74,6 +73,11 @@ void setup() {
   
   rf12_initialize(myNodeID,freq,network); // Initialize RFM12 with settings defined above 
   rf12_control(0xC000);					  // Adjust low battery voltage to 2.2V
+  
+  // !mp,90kHz,last byte=power level: 0=highest, 7=lowest
+  byte txPower=7; //LOWEST possible
+  rf12_control(0x9850 | (txPower > 7 ? 7 : txPower));
+
   rf12_sleep(0);                          // Put the RFM12 to sleep
  
   PRR = bit(PRTIM1); // only keep timer 0 going
@@ -105,13 +109,13 @@ void loop() {
   pinMode(tempPower, OUTPUT); // set power pin for DS18B20 to output  
   digitalWrite(tempPower, HIGH); // turn DS18B20 sensor on
   Sleepy::loseSomeTime(20); // Allow 20ms for the sensor to be ready
-  sensors.requestTemperatures(); // Send the command to get temperatures  
   
-  
-    for(int j=0;j<numSensors;j++) {
+  /*
+  for(int j=0;j<numSensors;j++) {
     sensors.setResolution(allAddress[j], TEMPERATURE_PRECISION);      // and set the a to d conversion resolution of each.
-  }
-    
+  }  
+  */
+  
   sensors.requestTemperatures(); // Send the command to get temperatures  
   Sleepy::loseSomeTime(ASYNC_DELAY); //Must wait for conversion, since we use ASYNC mode
   
