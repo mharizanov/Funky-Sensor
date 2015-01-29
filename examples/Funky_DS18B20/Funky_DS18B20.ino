@@ -75,8 +75,8 @@ void setup() {
   rf12_control(0xC000);					  // Adjust low battery voltage to 2.2V
   
   // !mp,90kHz,last byte=power level: 0=highest, 7=lowest
-  byte txPower=7; //LOWEST possible
-  rf12_control(0x9850 | (txPower > 7 ? 7 : txPower));
+ // byte txPower=7; //LOWEST possible
+  //rf12_control(0x9850 | (txPower > 7 ? 7 : txPower));
 
   rf12_sleep(0);                          // Put the RFM12 to sleep
  
@@ -108,7 +108,7 @@ void setup() {
 void loop() {
   pinMode(tempPower, OUTPUT); // set power pin for DS18B20 to output  
   digitalWrite(tempPower, HIGH); // turn DS18B20 sensor on
-  Sleepy::loseSomeTime(20); // Allow 20ms for the sensor to be ready
+  Sleepy::loseSomeTime(40); // Allow 20ms for the sensor to be ready
   
   /*
   for(int j=0;j<numSensors;j++) {

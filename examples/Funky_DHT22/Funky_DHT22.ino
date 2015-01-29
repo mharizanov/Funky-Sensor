@@ -26,7 +26,7 @@ ISR(WDT_vect) { Sleepy::watchdogEvent(); } // interrupt handler for JeeLabs Slee
 #define network 210      // RF12 Network group
 #define freq RF12_868MHZ // Frequency of RFM12B module
 
-#define LEDpin 10
+#define LEDpin 10 //#0 on early v1 revisions
 
 
 //########################################################################################################################
